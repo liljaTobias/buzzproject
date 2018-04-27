@@ -1,5 +1,6 @@
 import express from 'express'
 import bodyParser from 'body-parser'
+import gScraper from 'google-play-scraper'
 
 import Generator from '../models/Generator'
 
@@ -7,29 +8,22 @@ const router = express.Router()
 router.use(bodyParser.urlencoded({ extended: true }))
 router.use(bodyParser.json())
 
-router.post('/', (req, res) => {
-	Generator.create(
-		{
-			name: req.name
-		},
-		(err, generator) => {
-			if (err) {
-				return res
-					.status(500)
-					.send('There was a problem posting to the database')
-			}
-			return res.status(200).send(generator)
-		}
-	)
-})
+const translate = (data) => (
+  JSON.stringify(data).toUpperCase().slice(1, data.length+1)
+)
 
-router.get('/', (req, res) => {
-	Generator.find({}, (err, generators) => {
-		if (err) {
-			return res.status(500).send('There was a problem with the GET')
-		}
-		return res.status(200).send(generators)
-	})
+router.get('/list', (req, res) => {
+  // console.log(translate(req.query.category))
+  gScraper.list({
+    category: gScraper.category[translate(req.query.category)],
+    collection: gScraper.collection[translate(req.query.collection)],
+    num: req.query.count,
+    throttle: 10,
+  }).then((result) => {
+    return res.status(200).send(result)
+  }).catch(err => {
+    return res.status(400).send(err)
+  })
 })
 
 export default router
